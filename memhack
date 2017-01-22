@@ -1,0 +1,440 @@
+new ID_PLAYER_SYNC = 207;
+
+
+forward OnPlayerReceivedPacket(player_id, packet_id, BitStream:bs);
+public OnPlayerReceivedPacket(player_id, packet_id, BitStream:bs)
+{
+	if player_id == INVALID_PLAYER_ID || Kicktime[player_id] > -1 || !PlayerInfo[player_id][pOnline] *then return true;
+	else if(packet_id == ID_PLAYER_SYNC) //Packet_PlayerSync
+	{
+		new lrkeys, udkeys, sampkeys,Float:pos0,Float:pos1,Float:pos2,Float:quaternion0,Float:quaternion1,Float:quaternion2,Float:quaternion3,health, armor, weaponid, specialaction,Float:speeds0,Float:speeds1,Float:speeds2, Float:surfingoffsets0,Float:surfingoffsets1,Float:surfingoffsets2,surfingvehid, animationid, animflags;
+
+		BS_ResetReadPointer(bs);
+		BS_IgnoreBits(bs, 8); // packet id 1 byte
+		BS_ReadValue(bs, RNM_UINT16, lrkeys,
+		RNM_UINT16, udkeys,
+		RNM_UINT16, sampkeys,
+		RNM_FLOAT, pos0,
+		RNM_FLOAT, pos1,
+		RNM_FLOAT, pos2,
+		RNM_FLOAT, quaternion0,
+		RNM_FLOAT, quaternion1,
+		RNM_FLOAT, quaternion2,
+		RNM_FLOAT, quaternion3,
+		RNM_UINT8, health,
+		RNM_UINT8, armor,
+		RNM_UINT8, weaponid,
+		RNM_UINT8, specialaction,
+		RNM_FLOAT, speeds0,
+		RNM_FLOAT, speeds1,
+		RNM_FLOAT, speeds2,
+		RNM_FLOAT, surfingoffsets0,
+		RNM_FLOAT, surfingoffsets1,
+		RNM_FLOAT, surfingoffsets2,
+		RNM_UINT16, surfingvehid,
+		RNM_INT16, animationid,
+		RNM_INT16, animflags);
+
+		
+/*  		printf(" ");
+		printf(" ");
+		printf(" ");
+		printf(" ");
+		printf(" ");
+		printf(" ");
+		printf(" ");
+		printf(" ");
+		printf(" ");
+		printf(" ");
+		printf(" ");
+		printf(" ");
+		printf(" ");
+		printf(" ");
+		
+		printf("lrkeys %d udkeys %d sampkeys %d\n" \
+		"pos %.2f %.2f %.2f\n" \
+		"quaternion %.2f %.2f %.2f %.2f\n" \
+		"health %d\n" \
+		"armor %d\n" \
+		"weaponid %d\n" \
+		"specialaction %d\n" \
+		"speed %.2f %.2f %.2f\n" \
+		"surfingoffsets %.2f %.2f %.2f\n" \
+		"surfingvehid %d\n" \
+		"anim %d flags %d",
+		lrkeys, udkeys, sampkeys,
+		pos0, pos1, pos2,
+		quaternion0, quaternion1, quaternion2, quaternion3,
+		health, armor, weaponid, specialaction,
+		speeds0, speeds1, speeds2,
+		surfingoffsets0, surfingoffsets1, surfingoffsets2,
+		surfingvehid, animationid, animflags
+		);  */
+		
+		new Float:xa,Float:ya,Float:za;
+		
+		xa = pos0 - OldPos[player_id][0];
+		ya = pos1 - OldPos[player_id][1];
+		za = pos2 - OldPos[player_id][2];
+		
+		
+		new Float:distance = floatsqroot(floatadd(floatadd(floatpower(xa,2),floatpower(ya,2)),floatpower(za,2)));
+		
+		if(distance > 4.5)
+		{
+			if(!(PlayerUP[player_id] & pAbletoTP)) return Kick_RSS(player_id,"0xar1");
+			else PlayerUP[player_id] &= ~pAbletoTP;
+			
+		}
+
+		OldPos[player_id][0] = pos0;
+		OldPos[player_id][1] = pos1;
+		OldPos[player_id][2] = pos2;
+		
+		
+		if(animflags == 5892)
+		{
+			return Kick_RSS(player_id,"0xfl1");
+		}
+		else if(speeds0 > 0.8 || speeds1 > 0.8)
+		{
+			if(!(PlayerUP[player_id] & pAbletoTP)) return Kick_RSS(player_id,"0xzr1");
+			else PlayerUP[player_id] &= ~pAbletoTP;
+		}
+		else if specialaction == SPECIAL_ACTION_USEJETPACK *then return Kick_RSS(player_id,"0xjp1");
+		else if 1 <= surfingvehid <= MAX_VEHICLES && Car_Massiv[VehicleInfo[surfingvehid][Model]][vSurfers] == 0 *then SetPlayerPos_R(player_id,OldPos[player_id][0]+1,OldPos[player_id][1],OldPos[player_id][2]);
+		else if(1 <= weaponid <= 46)
+		{
+			new ammo = GetPlayerAmmo(player_id);
+			if(ammo != 0 && (weaponid != PlayerInfo[player_id][PlayerWeapon_R] || ammo > PlayerInfo[player_id][PlayerWeaponAmmo_R]+1 || ammo < PlayerInfo[player_id][PlayerWeaponAmmo_R]-1))
+			{
+				if(!(PlayerUP[player_id] & pAbletoTP)) return Kick_RSS(player_id,"0xwh1");
+				else PlayerUP[player_id] &= ~pAbletoTP;
+				
+			}
+		}
+		else if(!PlayerInfo[player_id][pReg] && unix > etaptime[player_id])
+		{
+			if(udkeys == 128)
+			{
+				TextDrawHideForPlayer(player_id, CustomTD[etap[player_id]+10]);
+				if(++etap[player_id] > 4) etap[player_id] = 0;
+				SetPlayerSkin(player_id,BomjPed[PlayerInfo[player_id][pRassa]-1][PlayerInfo[player_id][pSex]][etap[player_id]]);
+				TextDrawShowForPlayer(player_id, CustomTD[etap[player_id]+10]);
+				etaptime[player_id] = unix;
+				
+			}
+			else if(udkeys == 65408)
+			{
+				TextDrawHideForPlayer(player_id, CustomTD[etap[player_id]+10]);
+				if(--etap[player_id] < 0) etap[player_id] = 4;
+				SetPlayerSkin(player_id,BomjPed[PlayerInfo[player_id][pRassa]-1][PlayerInfo[player_id][pSex]][etap[player_id]]);
+				TextDrawShowForPlayer(player_id, CustomTD[etap[player_id]+10]);
+				etaptime[player_id] = unix;
+			}
+		}
+		else if(KasinoTabelID[player_id])
+		{
+			if(StatusGame[player_id] == 1)
+			{
+				new keyy;			
+				if(udkeys == 65408)
+				{
+					keyy = Key_NOW_Casinplayer[player_id];
+					AttachObjectToObject(Objektid[player_id],Casino_play[KasinoTabelID[player_id]][objekt_id][0],XandYcoords[SCAN_NEXT_SEKTOR[keyy][Key_UP]][X_Coords],XandYcoords[SCAN_NEXT_SEKTOR[keyy][Key_UP]][Y_Coords],Kasino_Visota);// рулетка
+					Key_NOW_Casinplayer[player_id] = SCAN_NEXT_SEKTOR[keyy][Key_UP];
+				}
+				else if(udkeys == 128)
+				{
+					keyy = Key_NOW_Casinplayer[player_id];
+					AttachObjectToObject(Objektid[player_id], Casino_play[KasinoTabelID[player_id]][objekt_id][0],XandYcoords[SCAN_NEXT_SEKTOR[keyy][Key_DOWN]][X_Coords],XandYcoords[SCAN_NEXT_SEKTOR[keyy][Key_DOWN]][Y_Coords],Kasino_Visota);// рулетка
+					Key_NOW_Casinplayer[player_id] = SCAN_NEXT_SEKTOR[keyy][Key_DOWN];
+				}
+				else if(lrkeys == KEY_LEFT)
+				{
+					keyy = Key_NOW_Casinplayer[player_id];
+					AttachObjectToObject(Objektid[player_id], Casino_play[KasinoTabelID[player_id]][objekt_id][0],XandYcoords[SCAN_NEXT_SEKTOR[keyy][Key_LEFT]][X_Coords],XandYcoords[SCAN_NEXT_SEKTOR[keyy][Key_LEFT]][Y_Coords],Kasino_Visota);// рулетка
+					Key_NOW_Casinplayer[player_id] = SCAN_NEXT_SEKTOR[keyy][Key_LEFT];
+				}
+				else if(lrkeys == KEY_RIGHT)
+				{
+					keyy = Key_NOW_Casinplayer[player_id];
+					AttachObjectToObject(Objektid[player_id], Casino_play[KasinoTabelID[player_id]][objekt_id][0],XandYcoords[SCAN_NEXT_SEKTOR[keyy][Key_RITH]][X_Coords],XandYcoords[SCAN_NEXT_SEKTOR[keyy][Key_RITH]][Y_Coords],Kasino_Visota);// рулетка
+					Key_NOW_Casinplayer[player_id] = SCAN_NEXT_SEKTOR[keyy][Key_RITH];
+				}
+			}
+		}
+	}
+	else if(packet_id == 200) //UpdateVeh
+	{
+		/*printf(" ");
+		printf(" ");
+		printf(" ");
+		printf(" ");
+		printf(" ");
+		printf(" ");
+		printf(" ");
+		printf(" ");
+		printf(" ");
+		printf(" ");
+		printf(" ");
+		printf(" ");
+		printf(" ");
+		printf(" ");
+		*/
+		
+		new vehicleid, lrkeys, udkeys, sampkeys,
+Float:pos[3], Float:quaternion[4], Float:carhealth,
+		health, armor, weaponid, siren, landgear, trailerid,
+Float:speeds[3], Float:trainspeed;
+
+		BS_ResetReadPointer(bs);
+		BS_IgnoreBits(bs, 8); 
+		BS_ReadValue(bs, RNM_UINT16, vehicleid,
+		RNM_UINT16, lrkeys,
+		RNM_UINT16, udkeys,
+		RNM_UINT16, sampkeys,
+		RNM_FLOAT, quaternion[0],
+		RNM_FLOAT, quaternion[1],
+		RNM_FLOAT, quaternion[2],
+		RNM_FLOAT, quaternion[3],
+		RNM_FLOAT, pos[0],
+		RNM_FLOAT, pos[1],
+		RNM_FLOAT, pos[2],
+		RNM_FLOAT, speeds[0],
+		RNM_FLOAT, speeds[1],
+		RNM_FLOAT, speeds[2],
+		RNM_FLOAT, carhealth,
+		RNM_UINT8, health,
+		RNM_UINT8, armor,
+		RNM_UINT8, weaponid,
+		RNM_UINT8, siren,
+		RNM_UINT8, landgear,
+		RNM_UINT16, trailerid,
+		RNM_FLOAT, trainspeed);
+		
+		
+		/*printf("%d, vehicleid\n"\
+						"%d, lrkeys\n"\
+						"%d, udkeys\n"\
+						"%d, sampkeys\n"\
+						"%.2f, quaternion[0]\n"\
+						"%.2f, quaternion[1]\n"\
+						"%.2f, quaternion[2]\n"\
+						"%.2f, quaternion[3]\n"\
+						"%.2f, pos[0]\n"\
+						"%.2f, pos[1]\n"\
+						"%.2f, pos[2]\n"\
+						"%.2f, speed[0]\n"\
+						"%.2f, speed[1]\n"\
+						"%.2f, speed[2]\n"\
+						"%.2f, carhealth\n"\
+						"%d, health\n"\
+						"%d, armor\n"\
+						"%d, weaponid\n"\
+						"%d, siren,\n"\
+						"%d, landgear\n"\
+						"%d, trailerid\n"\
+						"%.2f, trainspeed", vehicleid,
+						lrkeys,
+						udkeys,
+						sampkeys,
+						quaternion[0],
+						quaternion[1],
+						quaternion[2],
+						quaternion[3],
+						pos[0],
+						pos[1],
+						pos[2],
+						speed[0],
+						speed[1],
+						speed[2],
+						carhealth,
+						health,
+						armor,
+						weaponid,
+						siren,
+						landgear,
+						trailerid,
+						trainspeed); 
+		
+		*/
+		
+		new Float:xa,Float:ya,Float:za;
+		
+		xa = pos[0] - OldPos[player_id][0];
+		ya = pos[1] - OldPos[player_id][1];
+		za = pos[2] - OldPos[player_id][2];
+		
+		
+		new Float:distance = floatsqroot(floatadd(floatadd(floatpower(xa,2),floatpower(ya,2)),floatpower(za,2)));
+		new speeder = floatround(floatsqroot(speeds[0]*speeds[0] + speeds[1]*speeds[1] + speeds[2]*speeds[2]) * 160);
+		new Float:raznostHP = (carhealth/VehicleInfo[vehicleid][vehicleHealth]-1)*100;
+		
+		//античит
+		if(Carisds[player_id] && vehicleid != Carisds[player_id])
+		{
+			if(!(PlayerUP[player_id] & pAbletoTP)) return Kick_RSS(player_id,"0xtic3");
+			else PlayerUP[player_id] &= ~pAbletoTP;
+			
+		}
+		if(distance > 6.9)
+		{
+			if(!(PlayerUP[player_id] & pAbletoTP)) return Kick_RSS(player_id,"0xar2");
+			else PlayerUP[player_id] &= ~pAbletoTP;
+			
+		}
+		else if(za > 1.0 && speeder < 50)
+		{
+			if(!(PlayerUP[player_id] & pAbletoTP)) return Kick_RSS(player_id,"0xfl2");
+			else PlayerUP[player_id] &= ~pAbletoTP;
+		}
+		else if SpedomShow[VehicleInfo[vehicleid][Model]] *then 
+		{
+			if(speeder - VehicleInfo[vehicleid][vSpeed] >= 15) 
+			{
+				if(!(PlayerUP[player_id] & pAbletoTP) && VehicleInfo[vehicleid][vehicleHealth] == carhealth) return Kick_RSS(player_id,"0xsh2");
+				else PlayerUP[player_id] &= ~pAbletoTP;
+			}
+		}
+		else if(1 <= weaponid <= 46)
+		{
+			new ammo = GetPlayerAmmo(player_id);
+			if(ammo != 0 && (weaponid != PlayerInfo[player_id][PlayerWeapon_R] || ammo > PlayerInfo[player_id][PlayerWeaponAmmo_R]+1 || ammo < PlayerInfo[player_id][PlayerWeaponAmmo_R]-1))
+			{
+				if(!(PlayerUP[player_id] & pAbletoTP)) return Kick_RSS(player_id,"0xwh2");
+				else PlayerUP[player_id] &= ~pAbletoTP;
+				
+			}
+		}
+		
+		//античит
+		new Float:m3 = floatsqroot(floatpower(floatabs(speeds[0]), 2.0) + floatpower(floatabs(speeds[1]), 2.0) + floatpower(floatabs(speeds[2]), 2.0)) * 160;
+		if(speeder)
+		{
+			VehicleInfo[vehicleid][Probeg] += m3/2000;
+			ftl[player_id] = 0;
+			if(RentCarTF{vehicleid})
+			{
+				if(GetPlayerRentCar[player_id] != vehicleid)
+				{
+					if(speeder > 4)
+					{
+						if(Gateway[player_id] >= 3)
+						{
+							SetVehicleToRespawn(vehicleid);
+							return Kick_RSS(player_id,"0xrc2"); //rentcar
+						}
+						else Gateway[player_id] ++;
+					}
+				}
+			}
+			if(VehicleInfo[vehicleid][Engine] == 1)
+			{
+				if(SpedomShow[VehicleInfo[vehicleid][Model]])
+				{
+					
+					if(VehicleInfo[vehicleid][Fuel] > 0.0)
+					{
+						if(!GetPlayerFlag(PlayerUP[player_id],pShower))
+						{
+							if(speeder > VehRe{player_id} > 0)
+							{	
+								SetVehicleVelocity(vehicleid,speeds[0]*0.88,speeds[1]*0.88,speeds[2]);
+								speeder = VehRe{player_id};
+							}
+							new str[6];
+							valstr(str,speeder);
+							PlayerTextDrawSetString(player_id,GUI_speedometer[player_id][1],str);
+							VehicleInfo[vehicleid][Fuel] -= Car_Massiv[VehicleInfo[vehicleid][Model]][vFuellDrop]/7;
+							format(str,sizeof(str),"%.0f",VehicleInfo[vehicleid][Fuel]);
+							PlayerTextDrawSetString(player_id,GUI_speedometer[player_id][4],str);
+						}
+					}
+					else
+					{
+						SetVehicleVelocity(vehicleid,0,0,0);
+						VehicleInfo[vehicleid][Engine] = 0;
+						SetVehicleParamsEx(vehicleid,VehicleInfo[vehicleid][Engine],VehicleInfo[vehicleid][Lights],0,VehicleInfo[vehicleid][Locked],bonnet, boot, objective);
+					}
+				}
+			}
+		}
+		else
+		{
+			if(ftl[player_id] == 0)
+			{
+				ftl[player_id] = 1;
+				PlayerTextDrawSetString(player_id,GUI_speedometer[player_id][1],"0");
+			}
+		}
+		
+		OldPos[player_id][0] = pos[0];
+		OldPos[player_id][1] = pos[1];
+		OldPos[player_id][2] = pos[2];
+		
+		VehicleInfo[vehicleid][vehicleHealth] = carhealth;
+		VehicleInfo[vehicleid][vSpeed] = speeder;
+		
+	}
+	else if(packet_id == 211) //passagersynce
+	{
+		new vehicleid, seat, lrkeys,udkeys, sampkeys,armor,weaponid,health,
+Float:pos0,Float:pos1,Float:pos2;
+
+		BS_ResetReadPointer(bs);
+		BS_IgnoreBits(bs, 8); 
+		BS_ReadValue(bs,
+		RNM_UINT16, vehicleid,
+		RNM_UINT8, seat,
+		RNM_UINT8, weaponid,
+		RNM_UINT8, health,
+		RNM_UINT8, armor,
+		RNM_UINT16, lrkeys,
+		RNM_UINT16, udkeys,
+		RNM_UINT16, sampkeys,
+		RNM_FLOAT, pos0,
+		RNM_FLOAT, pos1,
+		RNM_FLOAT, pos2);
+		
+
+		new Float:xa,Float:ya,Float:za;
+		
+		xa = pos0 - OldPos[player_id][0];
+		ya = pos1 - OldPos[player_id][1];
+		za = pos2 - OldPos[player_id][2];
+		
+		
+		new Float:distance = floatsqroot(floatadd(floatadd(floatpower(xa,2),floatpower(ya,2)),floatpower(za,2)));
+		
+		if(Carisds[player_id] && vehicleid != Carisds[player_id])
+		{
+			if(!(PlayerUP[player_id] & pAbletoTP)) return Kick_RSS(player_id,"0xtic4");
+			else PlayerUP[player_id] &= ~pAbletoTP;
+			
+		}
+		else if(unix > ReTPC[vehicleid] && distance >= 1.5 && DRIVER_VEHICLE[vehicleid] == INVALID_PLAYER_ID)
+		{
+			SetPlayerPos_R(player_id, pos0, pos1, pos2+2.5); 
+			ApplyAnimation(player_id, "ped", "BIKE_fallR", 4.0, 0, 1, 0, 0, 0,0); 
+			
+			SetPlayerChatBubble(player_id,"выпал(-а)",COLOR_PURPLE,radiustag,5000);
+			PlayerUP[player_id] |= pAbletoTP;
+			Removecartime[player_id] = SetTimerEx("Antiremovecar", 2300, false, "i",player_id);
+		}
+		else if(1 <= weaponid <= 46)
+		{  
+			new ammo = GetPlayerAmmo(player_id);
+			if(ammo != 0 && (weaponid != PlayerInfo[player_id][PlayerWeapon_R] || ammo > PlayerInfo[player_id][PlayerWeaponAmmo_R]+1 || ammo < PlayerInfo[player_id][PlayerWeaponAmmo_R]-1))
+			{
+				if(!(PlayerUP[player_id] & pAbletoTP)) return Kick_RSS(player_id,"0xwh3");
+				else PlayerUP[player_id] &= ~pAbletoTP;
+				
+			}
+		}
+		OldPos[player_id][0] = pos0;
+		OldPos[player_id][1] = pos1;
+		OldPos[player_id][2] = pos2;
+	}
+	return true;
+}  
